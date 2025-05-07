@@ -1,0 +1,103 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Tiptap Editor</title>
+    <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+    <div class="container">
+        <h1>Tiptap Editor</h1>
+        
+        <div class="editor-container">
+            <div class="menu-bar">
+                <!-- Text formatting -->
+                <div class="menu-group">
+                    <button data-action="bold" title="Bold">Bold</button>
+                    <button data-action="italic" title="Italic">Italic</button>
+                    <button data-action="strike" title="Strikethrough">Strike</button>
+                    <button data-action="underline" title="Underline">Underline</button>
+                    <button data-action="highlight" title="Highlight">Highlight</button>
+                    <button data-action="subscript" title="Subscript">Subscript</button>
+                    <button data-action="superscript" title="Superscript">Superscript</button>
+                    <button data-action="link" title="Add Link">Link</button>
+                </div>
+
+                <!-- Headings -->
+                <div class="menu-group">
+                    <button data-action="heading" data-level="1" title="Heading 1">H1</button>
+                    <button data-action="heading" data-level="2" title="Heading 2">H2</button>
+                    <button data-action="heading" data-level="3" title="Heading 3">H3</button>
+                </div>
+
+                <!-- Lists -->
+                <div class="menu-group">
+                    <button data-action="bulletList" title="Bullet List">Bullet List</button>
+                    <button data-action="orderedList" title="Ordered List">Ordered List</button>
+                    <button data-action="taskList" title="Task List">Task List</button>
+                </div>
+
+                <!-- Block elements -->
+                <div class="menu-group">
+                    <button data-action="blockquote" title="Quote">Quote</button>
+                    <button data-action="codeBlock" title="Code Block">Code Block</button>
+                    <button data-action="horizontalRule" title="Horizontal Rule">Horizontal Rule</button>
+                </div>
+
+                <!-- Table -->
+                <div class="menu-group">
+                    <button data-action="insertTable" title="Insert Table">Table</button>
+                    <button data-action="addColumnBefore" title="Add Column Before">Col Before</button>
+                    <button data-action="addColumnAfter" title="Add Column After">Col After</button>
+                    <button data-action="addRowBefore" title="Add Row Before">Row Before</button>
+                    <button data-action="addRowAfter" title="Add Row After">Row After</button>
+                    <button data-action="deleteColumn" title="Delete Column">Del Col</button>
+                    <button data-action="deleteRow" title="Delete Row">Del Row</button>
+                    <button data-action="deleteTable" title="Delete Table">Del Table</button>
+                </div>
+
+                <!-- Other elements -->
+                <div class="menu-group">
+                    <button data-action="hardBreak" title="Hard Break">Line Break</button>
+                    <button data-action="image" title="Image">Image</button>
+                    <button data-action="youtube" title="YouTube">YouTube</button>
+                    <button data-action="mention" title="Mention">@Mention</button>
+                    <button data-action="syntaxHighlight" title="Code with Syntax Highlighting">Code Highlight</button>
+                </div>
+
+                <!-- Export -->
+                <div class="menu-group">
+                    <button data-action="exportMarkdown" title="Export as Markdown">Export MD</button>
+                </div>
+
+                <!-- History -->
+                <div class="menu-group">
+                    <button data-action="undo" title="Undo">Undo</button>
+                    <button data-action="redo" title="Redo">Redo</button>
+                </div>
+            </div>
+            
+            <div class="editor"></div>
+        </div>
+    </div>
+
+    <!-- Hidden file input for image upload -->
+    <input type="file" id="image-upload" accept="image/*" style="display: none;" />
+
+    <!-- Modal for displaying markdown -->
+    <div id="markdown-modal" class="modal">
+        <div class="modal-content">
+            <span class="close">&times;</span>
+            <h2>Markdown Export</h2>
+            <div class="modal-buttons">
+                <button id="copy-markdown">Copy to Clipboard</button>
+                <button id="download-markdown">Download as .md</button>
+            </div>
+            <pre id="markdown-output"></pre>
+        </div>
+    </div>
+
+    <script type="module" src="js/editor.js"></script>
+</body>
+</html> 
