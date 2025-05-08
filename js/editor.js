@@ -22,6 +22,7 @@ import Superscript from '@tiptap/extension-superscript'
 import TextStyle from '@tiptap/extension-text-style'
 import Underline from '@tiptap/extension-underline'
 import Link from '@tiptap/extension-link'
+import MarkdownIt from 'markdown-it'
 
 /**
  * Initialize the Tiptap editor with extensions
@@ -29,13 +30,13 @@ import Link from '@tiptap/extension-link'
 class TiptapEditor {
   constructor() {
     this.editor = null;
-    this.imageUploadInput = null;
     this.markdownModal = null;
     this.markdownOutput = null;
     this.closeModalBtn = null;
     this.copyMarkdownBtn = null;
     this.downloadMarkdownBtn = null;
     this.turndownService = null;
+    this.notificationTimeout = null;
     this.initialize();
     this.setupEventListeners();
   }
@@ -47,179 +48,197 @@ class TiptapEditor {
     // Create a lowlight instance with common languages
     const lowlight = createLowlight(common);
 
-    this.editor = new Editor({
-      element: document.querySelector('.editor'),
-      extensions: [
-        StarterKit.configure({
-          codeBlock: false
-        }),
-        Image,
-        Table.configure({
-          resizable: true,
-        }),
-        TableRow,
-        TableHeader,
-        TableCell,
-        TaskList,
-        TaskItem.configure({
-          nested: true,
-        }),
-        HorizontalRule,
-        HardBreak,
-        CodeBlockLowlight.configure({
-          lowlight,
-          defaultLanguage: 'javascript',
-        }),
-        YouTube.configure({
-          controls: true,
-          nocookie: true,
-          progressBarColor: 'white',
-          modestBranding: false,
-          inline: false,
-          HTMLAttributes: {
-            class: 'youtube-video-wrapper',
-          },
-          addPasteHandler: true,
-          allowFullscreen: true,
-        }),
-        Mention.configure({
-          HTMLAttributes: {
-            class: 'mention',
-          },
-          suggestion: {
-            items: ({ query }) => {
-              return [
-                'John Doe',
-                'Jane Smith',
-                'Alex Johnson',
-                'Sarah Williams',
-                'Michael Brown',
-              ]
-                .filter(item => item.toLowerCase().startsWith(query.toLowerCase()))
-                .slice(0, 5);
+    try {
+      // Initialize the editor with proper configuration
+      this.editor = new Editor({
+        element: document.querySelector('.editor'),
+        extensions: [
+          StarterKit.configure({
+            codeBlock: false,
+            // Explicitly include these to avoid duplicates
+            horizontalRule: true,
+            hardBreak: true,
+            strike: true
+          }),
+          Image,
+          Table.configure({
+            resizable: true,
+          }),
+          TableRow,
+          TableHeader,
+          TableCell,
+          TaskList,
+          TaskItem.configure({
+            nested: true,
+          }),
+          // Do not include these as they're part of StarterKit
+          // HorizontalRule,
+          // HardBreak,
+          CodeBlockLowlight.configure({
+            lowlight,
+            defaultLanguage: 'javascript',
+          }),
+          YouTube.configure({
+            controls: true,
+            nocookie: true,
+            progressBarColor: 'white',
+            modestBranding: false,
+            inline: false,
+            HTMLAttributes: {
+              class: 'youtube-video-wrapper',
             },
-            render: () => {
-              let popup;
-              let items;
-              
-              return {
-                onStart: (props) => {
-                  items = props.items;
-                  
-                  popup = document.createElement('div');
-                  popup.classList.add('mention-popup');
-                  
-                  items.forEach((item) => {
-                    const itemElement = document.createElement('div');
-                    itemElement.classList.add('mention-item');
-                    itemElement.textContent = item;
-                    itemElement.addEventListener('click', () => {
-                      props.command({ id: item.toLowerCase().replace(/\s/g, '_'), label: item });
-                      popup.remove();
+            addPasteHandler: true,
+            allowFullscreen: true,
+          }),
+          Mention.configure({
+            HTMLAttributes: {
+              class: 'mention',
+            },
+            suggestion: {
+              items: ({ query }) => {
+                return [
+                  'John Doe',
+                  'Jane Smith',
+                  'Alex Johnson',
+                  'Sarah Williams',
+                  'Michael Brown',
+                ]
+                  .filter(item => item.toLowerCase().startsWith(query.toLowerCase()))
+                  .slice(0, 5);
+              },
+              render: () => {
+                let popup;
+                let items;
+                
+                return {
+                  onStart: (props) => {
+                    items = props.items;
+                    
+                    popup = document.createElement('div');
+                    popup.classList.add('mention-popup');
+                    
+                    items.forEach((item) => {
+                      const itemElement = document.createElement('div');
+                      itemElement.classList.add('mention-item');
+                      itemElement.textContent = item;
+                      itemElement.addEventListener('click', () => {
+                        props.command({ id: item.toLowerCase().replace(/\s/g, '_'), label: item });
+                        popup.remove();
+                      });
+                      
+                      popup.appendChild(itemElement);
                     });
                     
-                    popup.appendChild(itemElement);
-                  });
-                  
-                  document.body.appendChild(popup);
-                  
-                  // Position the popup
-                  const coords = props.clientRect();
-                  popup.style.position = 'absolute';
-                  popup.style.left = `${coords.left}px`;
-                  popup.style.top = `${coords.top + coords.height}px`;
-                },
-                onUpdate: (props) => {
-                  items = props.items;
-                  
-                  // Clear the popup
-                  popup.innerHTML = '';
-                  
-                  items.forEach((item) => {
-                    const itemElement = document.createElement('div');
-                    itemElement.classList.add('mention-item');
-                    itemElement.textContent = item;
-                    itemElement.addEventListener('click', () => {
-                      props.command({ id: item.toLowerCase().replace(/\s/g, '_'), label: item });
-                      popup.remove();
+                    document.body.appendChild(popup);
+                    
+                    // Position the popup
+                    const coords = props.clientRect();
+                    popup.style.position = 'absolute';
+                    popup.style.left = `${coords.left}px`;
+                    popup.style.top = `${coords.top + coords.height}px`;
+                  },
+                  onUpdate: (props) => {
+                    items = props.items;
+                    
+                    // Clear the popup
+                    popup.innerHTML = '';
+                    
+                    items.forEach((item) => {
+                      const itemElement = document.createElement('div');
+                      itemElement.classList.add('mention-item');
+                      itemElement.textContent = item;
+                      itemElement.addEventListener('click', () => {
+                        props.command({ id: item.toLowerCase().replace(/\s/g, '_'), label: item });
+                        popup.remove();
+                      });
+                      
+                      popup.appendChild(itemElement);
                     });
                     
-                    popup.appendChild(itemElement);
-                  });
-                  
-                  // Position the popup
-                  const coords = props.clientRect();
-                  popup.style.position = 'absolute';
-                  popup.style.left = `${coords.left}px`;
-                  popup.style.top = `${coords.top + coords.height}px`;
-                },
-                onKeyDown: (props) => {
-                  const { event } = props;
-                  
-                  if (event.key === 'Escape') {
-                    popup.remove();
-                    return true;
+                    // Position the popup
+                    const coords = props.clientRect();
+                    popup.style.position = 'absolute';
+                    popup.style.left = `${coords.left}px`;
+                    popup.style.top = `${coords.top + coords.height}px`;
+                  },
+                  onKeyDown: (props) => {
+                    const { event } = props;
+                    
+                    if (event.key === 'Escape') {
+                      popup.remove();
+                      return true;
+                    }
+                    
+                    return false;
+                  },
+                  onExit: () => {
+                    if (popup) {
+                      popup.remove();
+                    }
                   }
-                  
-                  return false;
-                },
-                onExit: () => {
-                  if (popup) {
-                    popup.remove();
-                  }
-                }
-              };
+                };
+              },
             },
-          },
-        }),
-        Highlight.configure({
-          multicolor: true,
-        }),
-        Strike,
-        Subscript,
-        Superscript,
-        TextStyle,
-        Underline,
-        Link.configure({
-          openOnClick: true,
-          HTMLAttributes: {
-            rel: 'noopener noreferrer',
-            class: 'custom-link',
-          },
-        }),
-      ],
-      content: '',
-      autofocus: true,
-      editable: true,
-      onUpdate: ({ editor }) => {
-        // You can handle content updates here
-        // For example, save to localStorage or send to a server
-        console.log('Content updated:', editor.getHTML());
+          }),
+          Highlight.configure({
+            multicolor: true,
+          }),
+          Strike,
+          Subscript,
+          Superscript,
+          TextStyle,
+          Underline,
+          Link.configure({
+            openOnClick: true,
+            HTMLAttributes: {
+              rel: 'noopener noreferrer',
+              class: 'custom-link',
+            },
+          }),
+        ],
+        content: '',
+        autofocus: true,
+        editable: true,
+        onUpdate: ({ editor }) => {
+          // You can handle content updates here
+          // For example, save to localStorage or send to a server
+          console.log('Content updated:', editor.getHTML());
+        }
+      });
+
+      // Get references to markdown modal elements
+      this.markdownModal = document.getElementById('markdown-modal');
+      this.markdownOutput = document.getElementById('markdown-output');
+      this.closeModalBtn = document.querySelector('.close');
+      this.copyMarkdownBtn = document.getElementById('copy-markdown');
+      this.downloadMarkdownBtn = document.getElementById('download-markdown');
+
+      // Initialize Turndown for HTML to Markdown conversion
+      this.turndownService = new TurndownService({
+        headingStyle: 'atx',
+        codeBlockStyle: 'fenced',
+        emDelimiter: '*',
+      });
+
+      // Add custom rules for tables, task lists, etc.
+      this.setupTurndownRules();
+
+      // Log when editor is ready
+      console.log('Tiptap editor initialized!');
+
+      // Reset any lingering file dialogs
+      window._activeFileDialogs = [];
+
+      // Add notification container to the page if it doesn't exist
+      if (!document.getElementById('tiptap-notification')) {
+        const notificationContainer = document.createElement('div');
+        notificationContainer.id = 'tiptap-notification';
+        notificationContainer.style.display = 'none';
+        document.body.appendChild(notificationContainer);
       }
-    });
-
-    // Get reference to the file input element
-    this.imageUploadInput = document.getElementById('image-upload');
-
-    // Get references to markdown modal elements
-    this.markdownModal = document.getElementById('markdown-modal');
-    this.markdownOutput = document.getElementById('markdown-output');
-    this.closeModalBtn = document.querySelector('.close');
-    this.copyMarkdownBtn = document.getElementById('copy-markdown');
-    this.downloadMarkdownBtn = document.getElementById('download-markdown');
-
-    // Initialize Turndown for HTML to Markdown conversion
-    this.turndownService = new TurndownService({
-      headingStyle: 'atx',
-      codeBlockStyle: 'fenced',
-      emDelimiter: '*',
-    });
-
-    // Add custom rules for tables, task lists, etc.
-    this.setupTurndownRules();
-
-    // Log when editor is ready
-    console.log('Tiptap editor initialized!');
+    } catch (error) {
+      console.error('Error initializing editor:', error);
+    }
   }
 
   /**
@@ -369,7 +388,8 @@ class TiptapEditor {
    * Set up event listeners for the toolbar buttons, modal, etc.
    */
   setupEventListeners() {
-    document.querySelectorAll('.menu-bar button').forEach(button => {
+    // Event listeners for regular buttons
+    document.querySelectorAll('.menu-bar button:not(.dropdown-toggle)').forEach(button => {
       button.addEventListener('click', () => {
         const action = button.dataset.action;
         
@@ -379,49 +399,79 @@ class TiptapEditor {
       });
     });
 
-    // Handle file selection for image upload
-    this.imageUploadInput.addEventListener('change', this.handleImageUpload.bind(this));
-
-    // Update active states initially and on every transaction
-    this.updateMenuState();
-    this.editor.on('transaction', () => {
-      this.updateMenuState();
+    // Event listeners for dropdown buttons
+    document.querySelectorAll('.dropdown-menu button').forEach(button => {
+      button.addEventListener('click', (e) => {
+        e.stopPropagation(); // Prevent the event from bubbling up
+        const action = button.dataset.action;
+        
+        if (action) {
+          this.executeAction(action, button);
+        }
+      });
     });
+
+    // Wait for editor to be fully initialized before updating menu state
+    if (this.editor) {
+      // Ensure the editor is ready before updating menu state
+      this.editor.on('ready', () => {
+        console.log('Editor ready, initializing menu state');
+        this.updateMenuState();
+      });
+      
+      // Update active states on every transaction
+      this.editor.on('transaction', () => {
+        this.updateMenuState();
+      });
+    } else {
+      console.warn('Editor not initialized when setting up event listeners');
+    }
 
     // Modal close button
-    this.closeModalBtn.addEventListener('click', () => {
-      this.markdownModal.style.display = 'none';
-    });
+    if (this.closeModalBtn) {
+      this.closeModalBtn.addEventListener('click', () => {
+        this.markdownModal.style.display = 'none';
+      });
+    }
 
     // Close modal when clicking outside of it
     window.addEventListener('click', (event) => {
-      if (event.target === this.markdownModal) {
+      if (this.markdownModal && event.target === this.markdownModal) {
         this.markdownModal.style.display = 'none';
       }
     });
 
     // Copy markdown to clipboard
-    this.copyMarkdownBtn.addEventListener('click', () => {
-      navigator.clipboard.writeText(this.markdownOutput.textContent)
-        .then(() => {
-          alert('Markdown copied to clipboard!');
-        })
-        .catch(err => {
-          console.error('Failed to copy: ', err);
-        });
-    });
+    if (this.copyMarkdownBtn) {
+      this.copyMarkdownBtn.addEventListener('click', () => {
+        if (this.markdownOutput) {
+          navigator.clipboard.writeText(this.markdownOutput.textContent)
+            .then(() => {
+              this.showNotification('Markdown copied to clipboard!', 'success');
+            })
+            .catch(err => {
+              console.error('Failed to copy: ', err);
+              this.showNotification('Failed to copy to clipboard', 'error');
+            });
+        }
+      });
+    }
 
     // Download markdown as file
-    this.downloadMarkdownBtn.addEventListener('click', () => {
-      const markdown = this.markdownOutput.textContent;
-      const blob = new Blob([markdown], { type: 'text/markdown' });
-      const url = URL.createObjectURL(blob);
-      const a = document.createElement('a');
-      a.href = url;
-      a.download = 'document.md';
-      a.click();
-      URL.revokeObjectURL(url);
-    });
+    if (this.downloadMarkdownBtn) {
+      this.downloadMarkdownBtn.addEventListener('click', () => {
+        if (this.markdownOutput) {
+          const markdown = this.markdownOutput.textContent;
+          const blob = new Blob([markdown], { type: 'text/markdown' });
+          const url = URL.createObjectURL(blob);
+          const a = document.createElement('a');
+          a.href = url;
+          a.download = 'document.md';
+          a.click();
+          URL.revokeObjectURL(url);
+        }
+      });
+    }
   }
 
   /**
@@ -440,37 +490,6 @@ class TiptapEditor {
     const markdown = this.convertToMarkdown();
     this.markdownOutput.textContent = markdown;
     this.markdownModal.style.display = 'block';
-  }
-
-  /**
-   * Handle image file selection and insertion
-   * @param {Event} event - The change event from file input
-   */
-  handleImageUpload(event) {
-    const file = event.target.files[0];
-    
-    if (!file || !file.type.startsWith('image/')) {
-      console.warn('Selected file is not an image');
-      return;
-    }
-
-    // Create a FileReader to read the image file
-    const reader = new FileReader();
-    
-    reader.onload = (e) => {
-      // Insert the image into the editor at current position
-      this.editor.chain().focus().setImage({ src: e.target.result }).run();
-      
-      // Reset the file input so the same file can be selected again
-      event.target.value = '';
-    };
-    
-    reader.onerror = () => {
-      console.error('Error reading the image file');
-    };
-    
-    // Read the file as a data URL
-    reader.readAsDataURL(file);
   }
 
   /**
@@ -584,13 +603,47 @@ class TiptapEditor {
         this.editor.chain().focus().setHardBreak().run();
         break;
       case 'image':
-        // Trigger the hidden file input when the image button is clicked
-        this.imageUploadInput.click();
+        // Use a safe, isolated approach to file selection
+        this.safelyOpenFileDialog('image/*', (file) => {
+          if (file && file.type.startsWith('image/')) {
+            const reader = new FileReader();
+            reader.onload = (e) => {
+              this.editor.chain().focus().setImage({ src: e.target.result }).run();
+            };
+            reader.readAsDataURL(file);
+          } else if (file) {
+            this.showNotification('Selected file is not an image', 'error');
+          }
+        });
         break;
         
       // Export
       case 'exportMarkdown':
         this.showMarkdownExport();
+        break;
+      
+      // Import
+      case 'importMarkdown':
+        // Use the same safe approach for markdown import
+        this.safelyOpenFileDialog('.md,.markdown,text/markdown', (file) => {
+          if (file) {
+            const reader = new FileReader();
+            reader.onload = (e) => {
+              try {
+                this.importMarkdown(e.target.result);
+                this.showNotification(`File "${file.name}" imported successfully`, 'success');
+              } catch (error) {
+                console.error('Error importing markdown:', error);
+                this.showNotification('Error importing markdown file', 'error');
+              }
+            };
+            reader.onerror = () => {
+              console.error('Error reading the markdown file');
+              this.showNotification('Error reading the file', 'error');
+            };
+            reader.readAsText(file);
+          }
+        });
         break;
         
       // History
@@ -620,73 +673,171 @@ class TiptapEditor {
   }
 
   /**
+   * Safely open a file dialog without risk of multiple triggers
+   * @param {string} accept - File types to accept
+   * @param {Function} callback - Callback to run with the selected file
+   */
+  safelyOpenFileDialog(accept, callback) {
+    // Create a unique key for this file dialog to prevent duplicates
+    const dialogKey = `file_dialog_${Date.now()}`;
+    
+    // Track active file dialogs to prevent duplicates
+    if (window._activeFileDialogs && window._activeFileDialogs.length > 0) {
+      console.log('File dialog already active, preventing duplicate');
+      return;
+    }
+    
+    // Initialize tracking if needed
+    if (!window._activeFileDialogs) {
+      window._activeFileDialogs = [];
+    }
+    
+    // Add this dialog to active tracking
+    window._activeFileDialogs.push(dialogKey);
+    
+    // Create a new file input element
+    const input = document.createElement('input');
+    input.type = 'file';
+    input.accept = accept;
+    input.id = dialogKey;
+    input.style.display = 'none';
+    
+    // Add the input to the DOM
+    document.body.appendChild(input);
+    
+    // Set up the change event with cleanup
+    input.addEventListener('change', (event) => {
+      const file = event.target.files[0];
+      
+      // Run the callback with the file
+      if (callback && typeof callback === 'function') {
+        callback(file);
+      }
+      
+      // Clean up - remove the input element after use
+      setTimeout(() => {
+        if (document.body.contains(input)) {
+          document.body.removeChild(input);
+        }
+        
+        // Remove from active tracking
+        window._activeFileDialogs = window._activeFileDialogs.filter(key => key !== dialogKey);
+      }, 100);
+    }, { once: true }); // Use once: true to ensure the event only fires once
+    
+    // Handle the case where dialog is closed without selecting a file
+    const cleanup = () => {
+      if (document.body.contains(input)) {
+        document.body.removeChild(input);
+      }
+      
+      // Remove from active tracking
+      window._activeFileDialogs = window._activeFileDialogs.filter(key => key !== dialogKey);
+    };
+    
+    // Also set up cleanup on cancel/close
+    const cleanupTimeout = setTimeout(() => {
+      cleanup();
+    }, 60000); // Clean up after a minute if no selection
+    
+    // Set up a blur listener to clean up if dialog is closed without selecting
+    window.addEventListener('focus', () => {
+      setTimeout(() => {
+        // If the input is still there and has no files, remove it
+        if (document.body.contains(input) && (!input.files || input.files.length === 0)) {
+          cleanup();
+          clearTimeout(cleanupTimeout);
+        }
+      }, 1000); // Wait a second after focus returns to the window
+    }, { once: true });
+    
+    // Trigger click after a short delay to prevent event conflicts
+    setTimeout(() => {
+      input.click();
+    }, 50);
+  }
+
+  /**
    * Update the active state of menu buttons based on current editor state
    */
   updateMenuState() {
-    document.querySelectorAll('.menu-bar button').forEach(button => {
-      const action = button.dataset.action;
-      
-      if (!action) return;
-
-      // Set active state based on current editor state
-      let isActive = false;
-
-      switch (action) {
-        case 'bold':
-          isActive = this.editor.isActive('bold');
-          break;
-        case 'italic':
-          isActive = this.editor.isActive('italic');
-          break;
-        case 'strike':
-          isActive = this.editor.isActive('strike');
-          break;
-        case 'underline':
-          isActive = this.editor.isActive('underline');
-          break;
-        case 'highlight':
-          isActive = this.editor.isActive('highlight');
-          break;
-        case 'subscript':
-          isActive = this.editor.isActive('subscript');
-          break;
-        case 'superscript':
-          isActive = this.editor.isActive('superscript');
-          break;
-        case 'heading':
-          const level = parseInt(button.dataset.level || '1');
-          isActive = this.editor.isActive('heading', { level });
-          break;
-        case 'bulletList':
-          isActive = this.editor.isActive('bulletList');
-          break;
-        case 'orderedList':
-          isActive = this.editor.isActive('orderedList');
-          break;
-        case 'taskList':
-          isActive = this.editor.isActive('taskList');
-          break;
-        case 'blockquote':
-          isActive = this.editor.isActive('blockquote');
-          break;
-        case 'codeBlock':
-          isActive = this.editor.isActive('codeBlock');
-          break;
-        case 'syntaxHighlight':
-          isActive = this.editor.isActive('codeBlock');
-          break;
-        default:
-          // For buttons like undo/redo/image/table actions, no active state
-          isActive = false;
-      }
-
-      // Update button class based on active state
-      if (isActive) {
-        button.classList.add('is-active');
-      } else {
-        button.classList.remove('is-active');
-      }
+    // Check if editor is defined and has a valid state
+    if (!this.editor || !this.editor.state || typeof this.editor.isActive !== 'function') {
+      console.warn('Editor not fully initialized when updating menu state');
+      return;
+    }
+    
+    // Use the editor's isActive method instead of accessing state directly
+    // Text formatting options
+    document.querySelectorAll('button[data-action="bold"]').forEach(
+      button => button.classList.toggle('is-active', this.editor.isActive('bold'))
+    );
+    document.querySelectorAll('button[data-action="italic"]').forEach(
+      button => button.classList.toggle('is-active', this.editor.isActive('italic'))
+    );
+    document.querySelectorAll('button[data-action="strike"]').forEach(
+      button => button.classList.toggle('is-active', this.editor.isActive('strike'))
+    );
+    document.querySelectorAll('button[data-action="underline"]').forEach(
+      button => button.classList.toggle('is-active', this.editor.isActive('underline'))
+    );
+    document.querySelectorAll('button[data-action="highlight"]').forEach(
+      button => button.classList.toggle('is-active', this.editor.isActive('highlight'))
+    );
+    document.querySelectorAll('button[data-action="link"]').forEach(
+      button => button.classList.toggle('is-active', this.editor.isActive('link'))
+    );
+    document.querySelectorAll('button[data-action="subscript"]').forEach(
+      button => button.classList.toggle('is-active', this.editor.isActive('subscript'))
+    );
+    document.querySelectorAll('button[data-action="superscript"]').forEach(
+      button => button.classList.toggle('is-active', this.editor.isActive('superscript'))
+    );
+    
+    // Heading options
+    document.querySelectorAll('button[data-action="heading"]').forEach(button => {
+      const level = parseInt(button.dataset.level || '1');
+      button.classList.toggle('is-active', this.editor.isActive('heading', { level }));
     });
+    
+    // Update heading dropdown toggle state
+    const headingToggle = document.querySelector('.dropdown-toggle[title="Headings"]');
+    if (headingToggle) {
+      const isAnyHeadingActive = [1, 2, 3].some(level => this.editor.isActive('heading', { level }));
+      headingToggle.classList.toggle('is-active', isAnyHeadingActive);
+    }
+    
+    // Lists
+    document.querySelectorAll('button[data-action="bulletList"]').forEach(
+      button => button.classList.toggle('is-active', this.editor.isActive('bulletList'))
+    );
+    document.querySelectorAll('button[data-action="orderedList"]').forEach(
+      button => button.classList.toggle('is-active', this.editor.isActive('orderedList'))
+    );
+    document.querySelectorAll('button[data-action="taskList"]').forEach(
+      button => button.classList.toggle('is-active', this.editor.isActive('taskList'))
+    );
+    
+    // Block elements
+    document.querySelectorAll('button[data-action="blockquote"]').forEach(
+      button => button.classList.toggle('is-active', this.editor.isActive('blockquote'))
+    );
+    document.querySelectorAll('button[data-action="codeBlock"]').forEach(
+      button => button.classList.toggle('is-active', this.editor.isActive('codeBlock'))
+    );
+    
+    // Table dropdown toggle
+    const tableToggle = document.querySelector('.dropdown-toggle[title="Table"]');
+    if (tableToggle) {
+      tableToggle.classList.toggle('is-active', this.editor.isActive('table'));
+    }
+    
+    // Text style dropdown toggle
+    const textStyleToggle = document.querySelector('.dropdown-toggle[title="Text Style"]');
+    if (textStyleToggle) {
+      const isAnyTextStyleActive = this.editor.isActive('subscript') || this.editor.isActive('superscript');
+      textStyleToggle.classList.toggle('is-active', isAnyTextStyleActive);
+    }
   }
 
   /**
@@ -720,6 +871,58 @@ class TiptapEditor {
         console.error('Error inserting YouTube video:', error);
         alert('Error inserting YouTube video. Please try again.');
       }
+    }
+  }
+
+  /**
+   * Show a notification message to the user
+   * @param {string} message - The message to display
+   * @param {string} type - The type of notification (success, error, info)
+   */
+  showNotification(message, type = 'info') {
+    const notification = document.getElementById('tiptap-notification');
+    
+    // Clear any existing timeout
+    if (this.notificationTimeout) {
+      clearTimeout(this.notificationTimeout);
+    }
+    
+    // Set notification content and style
+    notification.textContent = message;
+    notification.className = '';
+    notification.classList.add('tiptap-notification', `notification-${type}`);
+    notification.style.display = 'block';
+    
+    // Hide notification after a delay
+    this.notificationTimeout = setTimeout(() => {
+      notification.style.display = 'none';
+    }, 3000);
+  }
+
+  /**
+   * Import markdown content into the editor
+   * @param {string} markdown - The markdown content to import
+   */
+  importMarkdown(markdown) {
+    try {
+      // Initialize markdown-it parser
+      const md = new MarkdownIt({
+        html: true,
+        breaks: true,
+        linkify: true,
+        typographer: true
+      });
+      
+      // Convert markdown to HTML
+      const html = md.render(markdown);
+      
+      // Set content to the editor
+      this.editor.commands.setContent(html);
+      
+      console.log('Markdown imported successfully');
+    } catch (error) {
+      console.error('Error converting markdown to HTML:', error);
+      throw new Error('Failed to import markdown');
     }
   }
 }

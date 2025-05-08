@@ -4,6 +4,8 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Tiptap Editor</title>
+    <!-- Add Font Awesome for icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <link rel="stylesheet" href="css/style.css">
 </head>
 <body>
@@ -14,67 +16,101 @@
             <div class="menu-bar">
                 <!-- Text formatting -->
                 <div class="menu-group">
-                    <button data-action="bold" title="Bold">Bold</button>
-                    <button data-action="italic" title="Italic">Italic</button>
-                    <button data-action="strike" title="Strikethrough">Strike</button>
-                    <button data-action="underline" title="Underline">Underline</button>
-                    <button data-action="highlight" title="Highlight">Highlight</button>
-                    <button data-action="subscript" title="Subscript">Subscript</button>
-                    <button data-action="superscript" title="Superscript">Superscript</button>
-                    <button data-action="link" title="Add Link">Link</button>
+                    <button data-action="bold" title="Bold"><i class="fas fa-bold"></i></button>
+                    <button data-action="italic" title="Italic"><i class="fas fa-italic"></i></button>
+                    <button data-action="strike" title="Strikethrough"><i class="fas fa-strikethrough"></i></button>
+                    <button data-action="underline" title="Underline"><i class="fas fa-underline"></i></button>
                 </div>
 
-                <!-- Headings -->
+                <!-- Text styling -->
                 <div class="menu-group">
-                    <button data-action="heading" data-level="1" title="Heading 1">H1</button>
-                    <button data-action="heading" data-level="2" title="Heading 2">H2</button>
-                    <button data-action="heading" data-level="3" title="Heading 3">H3</button>
+                    <button data-action="highlight" title="Highlight"><i class="fas fa-highlighter"></i></button>
+                    <button data-action="link" title="Add Link"><i class="fas fa-link"></i></button>
+                </div>
+
+                <!-- Headings dropdown -->
+                <div class="menu-group">
+                    <div class="dropdown">
+                        <button class="dropdown-toggle" title="Headings"><i class="fas fa-heading"></i> <i class="fas fa-caret-down"></i></button>
+                        <div class="dropdown-menu">
+                            <button data-action="heading" data-level="1" title="Heading 1">H1</button>
+                            <button data-action="heading" data-level="2" title="Heading 2">H2</button>
+                            <button data-action="heading" data-level="3" title="Heading 3">H3</button>
+                        </div>
+                    </div>
                 </div>
 
                 <!-- Lists -->
                 <div class="menu-group">
-                    <button data-action="bulletList" title="Bullet List">Bullet List</button>
-                    <button data-action="orderedList" title="Ordered List">Ordered List</button>
-                    <button data-action="taskList" title="Task List">Task List</button>
+                    <button data-action="bulletList" title="Bullet List"><i class="fas fa-list-ul"></i></button>
+                    <button data-action="orderedList" title="Ordered List"><i class="fas fa-list-ol"></i></button>
+                    <button data-action="taskList" title="Task List"><i class="fas fa-tasks"></i></button>
                 </div>
 
                 <!-- Block elements -->
                 <div class="menu-group">
-                    <button data-action="blockquote" title="Quote">Quote</button>
-                    <button data-action="codeBlock" title="Code Block">Code Block</button>
-                    <button data-action="horizontalRule" title="Horizontal Rule">Horizontal Rule</button>
+                    <button data-action="blockquote" title="Quote"><i class="fas fa-quote-right"></i></button>
+                    <button data-action="codeBlock" title="Code Block"><i class="fas fa-code"></i></button>
+                    <button data-action="horizontalRule" title="Horizontal Rule"><i class="fas fa-minus"></i></button>
                 </div>
 
-                <!-- Table -->
+                <!-- Table dropdown -->
                 <div class="menu-group">
-                    <button data-action="insertTable" title="Insert Table">Table</button>
-                    <button data-action="addColumnBefore" title="Add Column Before">Col Before</button>
-                    <button data-action="addColumnAfter" title="Add Column After">Col After</button>
-                    <button data-action="addRowBefore" title="Add Row Before">Row Before</button>
-                    <button data-action="addRowAfter" title="Add Row After">Row After</button>
-                    <button data-action="deleteColumn" title="Delete Column">Del Col</button>
-                    <button data-action="deleteRow" title="Delete Row">Del Row</button>
-                    <button data-action="deleteTable" title="Delete Table">Del Table</button>
+                    <div class="dropdown">
+                        <button class="dropdown-toggle" title="Table"><i class="fas fa-table"></i> <i class="fas fa-caret-down"></i></button>
+                        <div class="dropdown-menu">
+                            <button data-action="insertTable" title="Insert Table"><i class="fas fa-table"></i> Insert</button>
+                            <button data-action="addColumnBefore" title="Add Column Before"><i class="fas fa-plus"></i> Column Before</button>
+                            <button data-action="addColumnAfter" title="Add Column After"><i class="fas fa-plus"></i> Column After</button>
+                            <button data-action="addRowBefore" title="Add Row Before"><i class="fas fa-plus"></i> Row Before</button>
+                            <button data-action="addRowAfter" title="Add Row After"><i class="fas fa-plus"></i> Row After</button>
+                            <button data-action="deleteColumn" title="Delete Column"><i class="fas fa-trash-alt"></i> Column</button>
+                            <button data-action="deleteRow" title="Delete Row"><i class="fas fa-trash-alt"></i> Row</button>
+                            <button data-action="deleteTable" title="Delete Table"><i class="fas fa-trash-alt"></i> Table</button>
+                        </div>
+                    </div>
                 </div>
 
-                <!-- Other elements -->
+                <!-- Insert dropdown -->
                 <div class="menu-group">
-                    <button data-action="hardBreak" title="Hard Break">Line Break</button>
-                    <button data-action="image" title="Image">Image</button>
-                    <button data-action="youtube" title="YouTube">YouTube</button>
-                    <button data-action="mention" title="Mention">@Mention</button>
-                    <button data-action="syntaxHighlight" title="Code with Syntax Highlighting">Code Highlight</button>
+                    <div class="dropdown">
+                        <button class="dropdown-toggle" title="Insert"><i class="fas fa-plus-circle"></i> <i class="fas fa-caret-down"></i></button>
+                        <div class="dropdown-menu">
+                            <button data-action="image" title="Image"><i class="fas fa-image"></i> Image</button>
+                            <button data-action="youtube" title="YouTube"><i class="fab fa-youtube"></i> YouTube</button>
+                            <button data-action="mention" title="Mention"><i class="fas fa-at"></i> Mention</button>
+                            <button data-action="syntaxHighlight" title="Code with Syntax Highlighting"><i class="fas fa-code"></i> Code Highlight</button>
+                            <button data-action="hardBreak" title="Hard Break"><i class="fas fa-level-down-alt"></i> Line Break</button>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Text style dropdown -->
+                <div class="menu-group">
+                    <div class="dropdown">
+                        <button class="dropdown-toggle" title="Text Style"><i class="fas fa-font"></i> <i class="fas fa-caret-down"></i></button>
+                        <div class="dropdown-menu">
+                            <button data-action="subscript" title="Subscript"><i class="fas fa-subscript"></i> Subscript</button>
+                            <button data-action="superscript" title="Superscript"><i class="fas fa-superscript"></i> Superscript</button>
+                        </div>
+                    </div>
                 </div>
 
                 <!-- Export -->
                 <div class="menu-group">
-                    <button data-action="exportMarkdown" title="Export as Markdown">Export MD</button>
+                    <div class="dropdown">
+                        <button class="dropdown-toggle" title="Import/Export"><i class="fas fa-file-alt"></i> <i class="fas fa-caret-down"></i></button>
+                        <div class="dropdown-menu">
+                            <button data-action="importMarkdown" title="Import from Markdown"><i class="fas fa-file-import"></i> Import Markdown</button>
+                            <button data-action="exportMarkdown" title="Export as Markdown"><i class="fas fa-file-export"></i> Export Markdown</button>
+                        </div>
+                    </div>
                 </div>
 
                 <!-- History -->
                 <div class="menu-group">
-                    <button data-action="undo" title="Undo">Undo</button>
-                    <button data-action="redo" title="Redo">Redo</button>
+                    <button data-action="undo" title="Undo"><i class="fas fa-undo"></i></button>
+                    <button data-action="redo" title="Redo"><i class="fas fa-redo"></i></button>
                 </div>
             </div>
             
@@ -82,8 +118,18 @@
         </div>
     </div>
 
-    <!-- Hidden file input for image upload -->
-    <input type="file" id="image-upload" accept="image/*" style="display: none;" />
+    <!-- File inputs with labels for better handling -->
+    <div style="display: none;">
+      <!-- Image upload input -->
+      <label for="image-upload" id="image-upload-label">
+        <input type="file" id="image-upload" accept="image/*" />
+      </label>
+      
+      <!-- Markdown import input -->
+      <label for="markdown-import" id="markdown-import-label">
+        <input type="file" id="markdown-import" accept=".md,.markdown,text/markdown" />
+      </label>
+    </div>
 
     <!-- Modal for displaying markdown -->
     <div id="markdown-modal" class="modal">
