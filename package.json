@@ -47,6 +47,7 @@
     "@tiptap/pm": "^2.1.12",
     "@tiptap/starter-kit": "^2.1.12",
     "lowlight": "^3.3.0",
+    "markdown-it": "^14.1.0",
     "turndown": "^7.1.2"
   },
   "devDependencies": {
