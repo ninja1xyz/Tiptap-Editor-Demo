@@ -135,10 +135,9 @@ h1 {
 
 .dropdown-menu {
     position: absolute;
-    top: calc(100% + 5px);
+    top: calc(100% + 0px);
     left: 0;
-    z-index: 1000;
-    display: none;
+    z-index: 1500;
     min-width: 180px;
     padding: 6px 0;
     margin: 0;
@@ -147,14 +146,26 @@ h1 {
     border-radius: 6px;
     box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
     opacity: 0;
+    visibility: hidden;
+    pointer-events: none;
     transform: translateY(-10px);
-    transition: opacity 0.2s, transform 0.2s;
+    transition: opacity 0.2s ease, transform 0.2s ease, visibility 0.2s ease;
 }
 
-.dropdown:hover .dropdown-menu {
+/* Create a more generous hit area and keep menu visible during navigation */
+.dropdown:hover .dropdown-menu,
+.dropdown-menu:hover,
+.dropdown-menu:focus-within {
     display: block;
     opacity: 1;
+    visibility: visible;
+    pointer-events: auto;
     transform: translateY(0);
+}
+
+/* Add a small delay before the menu disappears */
+.dropdown:not(:hover) .dropdown-menu:not(:hover):not(:focus-within) {
+    transition-delay: 0.2s;
 }
 
 .dropdown-menu button {
@@ -325,7 +336,7 @@ h1 {
 .modal {
     display: none;
     position: fixed;
-    z-index: 100;
+    z-index: 2000;
     left: 0;
     top: 0;
     width: 100%;
@@ -339,11 +350,12 @@ h1 {
     margin: 5% auto;
     padding: 2rem;
     border-radius: 8px;
-    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
     width: 80%;
     max-width: 900px;
     max-height: 80vh;
     overflow-y: auto;
+    position: relative;
 }
 
 .close {

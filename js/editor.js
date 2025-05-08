@@ -399,6 +399,9 @@ class TiptapEditor {
       });
     });
 
+    // Enhance dropdown behavior for better UX
+    this.setupEnhancedDropdowns();
+
     // Event listeners for dropdown buttons
     document.querySelectorAll('.dropdown-menu button').forEach(button => {
       button.addEventListener('click', (e) => {
@@ -475,6 +478,113 @@ class TiptapEditor {
   }
 
   /**
+   * Setup enhanced dropdown behavior for better UX
+   */
+  setupEnhancedDropdowns() {
+    // Add click-to-toggle functionality for dropdowns
+    document.querySelectorAll('.dropdown-toggle').forEach(toggle => {
+      // Track open/closed state for each dropdown
+      toggle.setAttribute('aria-expanded', 'false');
+      
+      // Add click handler to toggle dropdown
+      toggle.addEventListener('click', (e) => {
+        e.preventDefault();
+        e.stopPropagation();
+        
+        // Toggle dropdown visibility
+        const dropdown = toggle.closest('.dropdown');
+        const menu = dropdown.querySelector('.dropdown-menu');
+        
+        // Close all other open dropdowns first
+        document.querySelectorAll('.dropdown-toggle[aria-expanded="true"]').forEach(openToggle => {
+          if (openToggle !== toggle) {
+            openToggle.setAttribute('aria-expanded', 'false');
+            const openMenu = openToggle.parentElement.querySelector('.dropdown-menu');
+            openMenu.style.display = '';
+            openMenu.style.opacity = '';
+            openMenu.style.visibility = '';
+            openMenu.style.pointerEvents = '';
+            openMenu.style.transform = '';
+          }
+        });
+        
+        // Toggle current dropdown
+        const isExpanded = toggle.getAttribute('aria-expanded') === 'true';
+        toggle.setAttribute('aria-expanded', isExpanded ? 'false' : 'true');
+        
+        if (!isExpanded) {
+          // Show dropdown
+          menu.style.display = 'block';
+          menu.style.opacity = '1';
+          menu.style.visibility = 'visible';
+          menu.style.pointerEvents = 'auto';
+          menu.style.transform = 'translateY(0)';
+          
+          // Set focus on first menu item
+          setTimeout(() => {
+            const firstItem = menu.querySelector('button');
+            if (firstItem) firstItem.focus();
+          }, 10);
+        } else {
+          // Hide dropdown
+          menu.style.display = '';
+          menu.style.opacity = '';
+          menu.style.visibility = '';
+          menu.style.pointerEvents = '';
+          menu.style.transform = '';
+        }
+      });
+    });
+    
+    // Close dropdowns when clicking outside
+    document.addEventListener('click', (e) => {
+      if (!e.target.closest('.dropdown')) {
+        document.querySelectorAll('.dropdown-toggle[aria-expanded="true"]').forEach(toggle => {
+          toggle.setAttribute('aria-expanded', 'false');
+          const menu = toggle.parentElement.querySelector('.dropdown-menu');
+          menu.style.display = '';
+          menu.style.opacity = '';
+          menu.style.visibility = '';
+          menu.style.pointerEvents = '';
+          menu.style.transform = '';
+        });
+      }
+    });
+    
+    // Add keyboard navigation for accessibility
+    document.querySelectorAll('.dropdown-menu').forEach(menu => {
+      menu.addEventListener('keydown', (e) => {
+        if (e.key === 'Escape') {
+          // Close dropdown on escape
+          const toggle = menu.parentElement.querySelector('.dropdown-toggle');
+          toggle.setAttribute('aria-expanded', 'false');
+          menu.style.display = '';
+          menu.style.opacity = '';
+          menu.style.visibility = '';
+          menu.style.pointerEvents = '';
+          menu.style.transform = '';
+          toggle.focus();
+        } else if (e.key === 'ArrowDown' || e.key === 'ArrowUp') {
+          e.preventDefault();
+          
+          // Navigate between menu items
+          const items = Array.from(menu.querySelectorAll('button'));
+          const currentIndex = items.indexOf(document.activeElement);
+          let nextIndex;
+          
+          if (e.key === 'ArrowDown') {
+            nextIndex = currentIndex < items.length - 1 ? currentIndex + 1 : 0;
+          } else {
+            nextIndex = currentIndex > 0 ? currentIndex - 1 : items.length - 1;
+          }
+          
+          items[nextIndex].focus();
+        }
+      });
+    });
+  }
+
+  /**
    * Convert the editor content to Markdown
    * @returns {string} The Markdown representation of the editor content
    */
@@ -484,9 +594,29 @@ class TiptapEditor {
   }
 
   /**
+   * Close all open dropdowns
+   */
+  closeAllDropdowns() {
+    document.querySelectorAll('.dropdown-toggle[aria-expanded="true"]').forEach(toggle => {
+      toggle.setAttribute('aria-expanded', 'false');
+      const menu = toggle.parentElement.querySelector('.dropdown-menu');
+      if (menu) {
+        menu.style.display = '';
+        menu.style.opacity = '';
+        menu.style.visibility = '';
+        menu.style.pointerEvents = '';
+        menu.style.transform = '';
+      }
+    });
+  }
+
+  /**
    * Show the markdown export modal with converted content
    */
   showMarkdownExport() {
+    // Close any open dropdowns first
+    this.closeAllDropdowns();
+    
     const markdown = this.convertToMarkdown();
     this.markdownOutput.textContent = markdown;
     this.markdownModal.style.display = 'block';
@@ -498,6 +628,12 @@ class TiptapEditor {
    * @param {HTMLElement} button - The button element that was clicked
    */
   executeAction(action, button) {
+    // Close dropdowns for most actions (they stay open only for dropdown children)
+    if (!button.closest('.dropdown-menu') || 
+        ['exportMarkdown', 'importMarkdown', 'image', 'youtube', 'link'].includes(action)) {
+      this.closeAllDropdowns();
+    }
+    
     switch (action) {
       // Text formatting
       case 'bold':
@@ -678,6 +814,9 @@ class TiptapEditor {
    * @param {Function} callback - Callback to run with the selected file
    */
   safelyOpenFileDialog(accept, callback) {
+    // Close any open dropdowns first
+    this.closeAllDropdowns();
+    
     // Create a unique key for this file dialog to prevent duplicates
     const dialogKey = `file_dialog_${Date.now()}`;
     
@@ -844,6 +983,9 @@ class TiptapEditor {
    * Prompt for YouTube URL and insert video
    */
   promptForYoutubeUrl() {
+    // Close any open dropdowns first
+    this.closeAllDropdowns();
+    
     const url = prompt('Enter YouTube URL:');
     
     if (url) {
@@ -869,7 +1011,7 @@ class TiptapEditor {
         }, 50);
       } catch (error) {
         console.error('Error inserting YouTube video:', error);
-        alert('Error inserting YouTube video. Please try again.');
+        this.showNotification('Error inserting YouTube video. Please try again.', 'error');
       }
     }
   }
