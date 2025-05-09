@@ -37,6 +37,7 @@ class TiptapEditor {
     this.downloadMarkdownBtn = null;
     this.turndownService = null;
     this.notificationTimeout = null;
+    this.isTableInsertInProgress = false;
     this.initialize();
     this.setupEventListeners();
   }
@@ -202,7 +203,6 @@ class TiptapEditor {
         onUpdate: ({ editor }) => {
           // You can handle content updates here
           // For example, save to localStorage or send to a server
-          console.log('Content updated:', editor.getHTML());
         }
       });
 
@@ -222,9 +222,6 @@ class TiptapEditor {
 
       // Add custom rules for tables, task lists, etc.
       this.setupTurndownRules();
-
-      // Log when editor is ready
-      console.log('Tiptap editor initialized!');
 
       // Reset any lingering file dialogs
       window._activeFileDialogs = [];
@@ -250,17 +247,50 @@ class TiptapEditor {
       filter: 'table',
       replacement: function(content, node) {
         // Process the table headers
-        const headers = Array.from(node.querySelectorAll('th')).map(th => th.textContent.trim());
+        const headers = Array.from(node.querySelectorAll('thead > tr > th, tr:first-child > th')).map(th => {
+          // Clean up the text content
+          return th.textContent.trim() || ' ';
+        });
+        
+        // If no headers, create empty ones based on the number of columns in first row
+        let headerRow = [];
+        if (headers.length === 0) {
+          const firstRow = node.querySelector('tr');
+          if (firstRow) {
+            const cellCount = firstRow.querySelectorAll('td').length;
+            headerRow = Array(cellCount).fill(' ');
+          } else {
+            headerRow = [' '];
+          }
+        } else {
+          headerRow = headers;
+        }
         
         // Create the markdown table header
-        let markdown = '| ' + headers.join(' | ') + ' |\n';
-        markdown += '| ' + headers.map(() => '---').join(' | ') + ' |\n';
+        let markdown = '| ' + headerRow.join(' | ') + ' |\n';
+        markdown += '| ' + headerRow.map(() => '---').join(' | ') + ' |\n';
         
-        // Process the table rows
-        const rows = Array.from(node.querySelectorAll('tr')).slice(headers.length > 0 ? 1 : 0);
+        // Process the table rows (exclude header row if it exists)
+        let rows;
+        if (node.querySelector('thead')) {
+          // If we have a thead, get all rows from tbody
+          rows = Array.from(node.querySelectorAll('tbody > tr'));
+        } else {
+          // Otherwise, get all rows except the first one (assuming it contains headers)
+          rows = Array.from(node.querySelectorAll('tr')).slice(headers.length > 0 ? 1 : 0);
+        }
         
         rows.forEach(row => {
-          const cells = Array.from(row.querySelectorAll('td')).map(td => td.textContent.trim());
+          const cells = Array.from(row.querySelectorAll('td')).map(td => {
+            // Clean up the text content
+            return td.textContent.trim() || ' ';
+          });
+          
+          // If the row doesn't have enough cells to match the headers, pad with empty cells
+          while (cells.length < headerRow.length) {
+            cells.push(' ');
+          }
+          
           markdown += '| ' + cells.join(' | ') + ' |\n';
         });
         
@@ -418,7 +448,6 @@ class TiptapEditor {
     if (this.editor) {
       // Ensure the editor is ready before updating menu state
       this.editor.on('ready', () => {
-        console.log('Editor ready, initializing menu state');
         this.updateMenuState();
       });
       
@@ -628,9 +657,15 @@ class TiptapEditor {
    * @param {HTMLElement} button - The button element that was clicked
    */
   executeAction(action, button) {
-    // Close dropdowns for most actions (they stay open only for dropdown children)
-    if (!button.closest('.dropdown-menu') || 
-        ['exportMarkdown', 'importMarkdown', 'image', 'youtube', 'link'].includes(action)) {
+    // For actions triggered from dropdown menus, close the dropdown first
+    // to prevent any race conditions or double execution
+    if (button.closest('.dropdown-menu')) {
+      // Wait a moment before closing dropdown to prevent race conditions
+      requestAnimationFrame(() => {
+        this.closeAllDropdowns();
+      });
+    } else {
+      // For non-dropdown buttons, close dropdowns immediately
       this.closeAllDropdowns();
     }
     
@@ -710,7 +745,32 @@ class TiptapEditor {
         
       // Table
       case 'insertTable':
-        this.editor.chain().focus().insertTable({ rows: 3, cols: 3, withHeaderRow: true }).run();
+        // Prevent double execution
+        if (this.isTableInsertInProgress) {
+          return;
+        }
+        
+        try {
+          
+          // Set the flag to prevent double execution
+          this.isTableInsertInProgress = true;
+          
+          // Insert the table with standard dimensions
+          this.editor.chain()
+            .focus()
+            .insertTable({
+              rows: 3,
+              cols: 3,
+              withHeaderRow: true
+            })
+            .run();
+        } catch (error) {
+          console.error('Error inserting table:', error);
+        } finally {
+          setTimeout(() => {
+            this.isTableInsertInProgress = false;
+          }, 300);
+        }
         break;
       case 'addColumnBefore':
         this.editor.chain().focus().addColumnBefore().run();
@@ -822,7 +882,7 @@ class TiptapEditor {
     
     // Track active file dialogs to prevent duplicates
     if (window._activeFileDialogs && window._activeFileDialogs.length > 0) {
-      console.log('File dialog already active, preventing duplicate');
+      // Prevent opening multiple file dialogs
       return;
     }
     
@@ -990,9 +1050,7 @@ class TiptapEditor {
     
     if (url) {
       try {
-        // According to docs, we should pass the full URL as src
-        console.log('Attempting to insert YouTube video with URL:', url);
-        
+        // Insert the YouTube video
         this.editor.commands.createParagraphNear();
         
         this.editor.commands.setYoutubeVideo({
@@ -1000,15 +1058,6 @@ class TiptapEditor {
           width: 640,
           height: 360
         });
-        
-        // Check if the video was inserted
-        setTimeout(() => {
-          const content = this.editor.getHTML();
-          // Extract video ID from various YouTube URL formats
-          const regExp = /^.*(?:(?:youtu\.be\/|v\/|vi\/|u\/\w\/|embed\/|shorts\/)|(?:(?:watch)?\?v(?:i)?=|\&v(?:i)?=))([^#\&\?]*).*/;
-          const match = url.match(regExp);
-          const videoId = match && match[1] ? match[1] : null;
-        }, 50);
       } catch (error) {
         console.error('Error inserting YouTube video:', error);
         this.showNotification('Error inserting YouTube video. Please try again.', 'error');
@@ -1060,8 +1109,6 @@ class TiptapEditor {
       
       // Set content to the editor
       this.editor.commands.setContent(html);
-      
-      console.log('Markdown imported successfully');
     } catch (error) {
       console.error('Error converting markdown to HTML:', error);
       throw new Error('Failed to import markdown');
