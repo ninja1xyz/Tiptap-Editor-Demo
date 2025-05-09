@@ -1,6 +1,6 @@
 import { Editor } from '@tiptap/core'
 import StarterKit from '@tiptap/starter-kit'
-import Image from '@tiptap/extension-image'
+import CustomImage from './custom-image.js'
 import Table from '@tiptap/extension-table'
 import TableRow from '@tiptap/extension-table-row'
 import TableCell from '@tiptap/extension-table-cell'
@@ -61,7 +61,7 @@ class TiptapEditor {
             hardBreak: true,
             strike: true
           }),
-          Image,
+          CustomImage,
           Table.configure({
             resizable: true,
           }),
@@ -410,6 +410,17 @@ class TiptapEditor {
       filter: 'u',
       replacement: function(content) {
         return `__${content}__`;
+      }
+    });
+
+    // Custom rule for images
+    this.turndownService.addRule('images', {
+      filter: 'img',
+      replacement: function(content, node) {
+        const alt = node.getAttribute('alt') || '';
+        const src = node.getAttribute('src') || '';
+        const title = node.getAttribute('title') ? ` "${node.getAttribute('title')}"` : '';
+        return `![${alt}](${src}${title})`;
       }
     });
   }
@@ -804,7 +815,11 @@ class TiptapEditor {
           if (file && file.type.startsWith('image/')) {
             const reader = new FileReader();
             reader.onload = (e) => {
-              this.editor.chain().focus().setImage({ src: e.target.result }).run();
+              const altText = prompt('Enter alt text for the image (for accessibility):', '');
+              this.editor.chain().focus().setImage({ 
+                src: e.target.result,
+                alt: altText || ''
+              }).run();
             };
             reader.readAsDataURL(file);
           } else if (file) {

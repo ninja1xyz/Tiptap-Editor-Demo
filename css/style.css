@@ -390,9 +390,92 @@ h1 {
     display: block;
 }
 
-.editor .ProseMirror-selectednode img {
+.image-wrapper {
+    position: relative;
+    display: inline-block;
+    margin: 1rem 0;
+}
+
+.image-wrapper img {
+    max-width: 100%;
+    height: auto;
+    border-radius: 4px;
+    display: block;
+    margin: 0; /* Reset margin since wrapper has margin */
+}
+
+.editor .ProseMirror-selectednode img,
+.editor .ProseMirror-selectednode .image-wrapper {
     outline: 2px solid #4299e1;
     border-radius: 4px;
+}
+
+/* Image Alt Text Indicator */
+.image-alt-indicator {
+    position: absolute;
+    left: 0;
+    bottom: 0;
+    background-color: rgba(0, 0, 0, 0.7);
+    color: white;
+    font-size: 12px;
+    padding: 2px 6px;
+    border-radius: 0 4px 0 0;
+    max-width: 100%;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    z-index: 10;
+    opacity: 0;
+    transition: opacity 0.2s;
+}
+
+.editor .ProseMirror-selectednode .image-alt-indicator,
+.image-wrapper:hover .image-alt-indicator {
+    opacity: 1;
+}
+
+/* Image Bubble Menu */
+.image-bubble-menu {
+    position: absolute;
+    bottom: -35px;
+    left: 50%;
+    transform: translateX(-50%);
+    display: flex;
+    background-color: white;
+    border-radius: 4px;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+    padding: 4px;
+    margin-top: 8px;
+    z-index: 50;
+    opacity: 0;
+    visibility: hidden;
+    transition: opacity 0.2s, visibility 0.2s;
+}
+
+.editor .ProseMirror-selectednode .image-bubble-menu,
+.image-wrapper:hover .image-bubble-menu {
+    opacity: 1;
+    visibility: visible;
+}
+
+.image-bubble-menu button {
+    background-color: transparent;
+    border: none;
+    border-radius: 4px;
+    padding: 4px 8px;
+    cursor: pointer;
+    font-size: 12px;
+    color: #4a5568;
+    display: flex;
+    align-items: center;
+}
+
+.image-bubble-menu button:hover {
+    background-color: #f7fafc;
+}
+
+.image-bubble-menu button i {
+    margin-right: 4px;
 }
 
 /* ProseMirror Specific Styles */
