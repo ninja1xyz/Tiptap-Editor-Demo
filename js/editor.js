@@ -7,9 +7,6 @@ import TableCell from '@tiptap/extension-table-cell'
 import TableHeader from '@tiptap/extension-table-header'
 import TaskList from '@tiptap/extension-task-list'
 import TaskItem from '@tiptap/extension-task-item'
-import HorizontalRule from '@tiptap/extension-horizontal-rule'
-import CodeBlock from '@tiptap/extension-code-block'
-import HardBreak from '@tiptap/extension-hard-break'
 import TurndownService from 'turndown'
 import CodeBlockLowlight from '@tiptap/extension-code-block-lowlight'
 import { common, createLowlight } from 'lowlight'
@@ -22,6 +19,7 @@ import Superscript from '@tiptap/extension-superscript'
 import TextStyle from '@tiptap/extension-text-style'
 import Underline from '@tiptap/extension-underline'
 import Link from '@tiptap/extension-link'
+import Heading from '@tiptap/extension-heading'
 import MarkdownIt from 'markdown-it'
 
 /**
@@ -38,6 +36,7 @@ class TiptapEditor {
     this.turndownService = null;
     this.notificationTimeout = null;
     this.isTableInsertInProgress = false;
+    this.lastHeadingActionTime = 0;
     this.initialize();
     this.setupEventListeners();
   }
@@ -59,7 +58,11 @@ class TiptapEditor {
             // Explicitly include these to avoid duplicates
             horizontalRule: true,
             hardBreak: true,
-            strike: true
+            strike: true,
+            heading: false
+          }),
+          Heading.configure({
+            levels: [1, 2, 3]
           }),
           CustomImage,
           Table.configure({
@@ -201,7 +204,6 @@ class TiptapEditor {
         autofocus: true,
         editable: true,
         onUpdate: ({ editor }) => {
-          // You can handle content updates here
           // For example, save to localStorage or send to a server
         }
       });
@@ -242,6 +244,15 @@ class TiptapEditor {
    * Set up custom turndown rules for proper markdown conversion
    */
   setupTurndownRules() {
+    // Custom rule for headings
+    this.turndownService.addRule('headings', {
+      filter: ['h1', 'h2', 'h3', 'h4', 'h5', 'h6'],
+      replacement: function(content, node) {
+        const level = parseInt(node.nodeName.charAt(1));
+        return '\n' + '#'.repeat(level) + ' ' + content + '\n\n';
+      }
+    });
+
     // Custom rule for tables
     this.turndownService.addRule('table', {
       filter: 'table',
@@ -729,7 +740,18 @@ class TiptapEditor {
       // Headings
       case 'heading':
         const level = parseInt(button.dataset.level || '1');
-        this.editor.chain().focus().toggleHeading({ level }).run();
+        
+        // Debounce protection - prevent rapid double execution
+        const now = Date.now();
+        if (now - this.lastHeadingActionTime < 300) {
+          return;
+        }
+        this.lastHeadingActionTime = now;
+        if (this.editor.isActive('heading', { level })) {
+          this.editor.chain().focus().setParagraph().run();
+        } else {
+          this.editor.chain().focus().clearNodes().setHeading({ level }).run();
+        }
         break;
         
       // Lists
@@ -1019,6 +1041,26 @@ class TiptapEditor {
     if (headingToggle) {
       const isAnyHeadingActive = [1, 2, 3].some(level => this.editor.isActive('heading', { level }));
       headingToggle.classList.toggle('is-active', isAnyHeadingActive);
+      
+      // Update the dropdown text to indicate the current heading level
+      if (isAnyHeadingActive) {
+        for (let level = 1; level <= 3; level++) {
+          if (this.editor.isActive('heading', { level })) {
+            const hasTextContent = headingToggle.textContent.trim();
+            const hasHeadingLevel = headingToggle.textContent.includes(`H${level}`);
+            
+            if (!hasHeadingLevel) {
+              headingToggle.innerHTML = `<i class="fas fa-heading"></i> H${level} <i class="fas fa-caret-down"></i>`;
+            }
+            break;
+          }
+        }
+      } else {
+        const hasHeadingLevelText = /H[1-3]/.test(headingToggle.textContent);
+        if (hasHeadingLevelText) {
+          headingToggle.innerHTML = `<i class="fas fa-heading"></i> <i class="fas fa-caret-down"></i>`;
+        }
+      }
     }
     
     // Lists
